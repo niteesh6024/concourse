@@ -20,7 +20,7 @@ jobs:
           - |
             ls
             pwd
-            echo hi niteesh
+            echo hi niteesh satya sai
             
 resources:
 - name: concourse-git
