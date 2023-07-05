@@ -1,14 +1,14 @@
----
 jobs:
-- name: job
-  public: true
+- name: set-pipeline
   plan:
-  - task: simple-task
-    config:
-      platform: linux
-      image_resource:
-        type: registry-image
-        source: { repository: nginx }
-      run:
-        path: echo
-        args: ["Hello world!"]
+  - get: concourse-git
+    trigger: true
+  - set_pipeline: self  # pipeline's name
+    file: concourse-git/set-pipeline.yaml  # pipeline's config
+
+resources:
+- name: concourse-git
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/niteesh6024/concourse.git
