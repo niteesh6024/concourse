@@ -21,6 +21,15 @@ jobs:
             ls
             pwd
             echo hi niteesh satya sai
+- name: set-other-pipelines
+  public: true
+  plan:
+  - get: concourse-git
+    trigger: true
+    passed: [set-pipeline]
+
+  - set_pipeline: other-pipeline
+    file: concourse-git/hello-world.yaml
             
 resources:
 - name: concourse-git
