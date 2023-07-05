@@ -5,7 +5,23 @@ jobs:
     trigger: true
   - set_pipeline: self  # pipeline's name
     file: concourse-git/set-pipeline.yaml  # pipeline's config
-
+  - task: basic-commands
+    config:
+      inputs:
+        - name: concourse-git
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: { repository: nginx }
+      run:
+        path: sh
+        args: 
+          - -c #tells to read multiple inputs
+          - |
+            ls
+            pwd
+            echo hi niteesh
+            
 resources:
 - name: concourse-git
   type: git
