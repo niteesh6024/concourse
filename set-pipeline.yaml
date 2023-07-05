@@ -1,0 +1,17 @@
+---
+resources:
+- name: concourse-git
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/niteesh6024/concourse.git
+
+jobs:
+# update this pipeline before updating child pipelines
+- name: set-self
+  public: true
+  plan:
+  - get: concourse-git
+    trigger: true
+  - set_pipeline: self
+    file: concourse-git/set-pipeline.yaml
