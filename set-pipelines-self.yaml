@@ -1,0 +1,16 @@
+jobs:
+- name: set-pipeline
+  plan:
+  - get: concourse-git
+    trigger: true
+  - set_pipeline: self  # pipeline's name
+    file: concourse-git/extra/set-pipeline-self.yaml  # pipeline's config
+#even this file is not updated and the file in the git is updated then by using self 
+#we can update the pipeline will again executing the fly set-pipeline command
+
+resources:
+- name: concourse-git
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/niteesh6024/concourse.git

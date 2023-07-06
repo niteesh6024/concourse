@@ -1,0 +1,28 @@
+jobs:
+- name: set-pipeline
+  plan:
+  - get: concourse-git
+    trigger: true
+  - set_pipeline: self  # pipeline's name
+    file: concourse-git/extra/set-pipeline.yaml  # pipeline's config
+  - task: basic-commands
+    config:
+      inputs:
+        - name: concourse-git
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: { repository: nginx }
+      run:
+        path: sh
+        args: 
+          - -c #tells to read multiple inputs
+          - |
+            echo "updated file will execute"
+            
+resources:
+- name: concourse-git
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/niteesh6024/concourse.git

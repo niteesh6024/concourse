@@ -1,0 +1,30 @@
+---
+resources:
+- name: concourse-git
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/niteesh6024/concourse.git
+
+
+jobs:
+# update this pipeline before updating child pipelines
+- name: set-self
+  plan:
+  - get: concourse-git
+    trigger: true
+  - set_pipeline: self
+    file: concourse-git/set-pipeline.yaml
+
+- name: set-example-pipelines
+  plan:
+  - get: concourse-git
+    trigger: true
+    passed: [set-self]
+  - set_pipeline: pipline-1
+    file: concourse-git/hello-world.yaml
+  - set_pipeline: pipline-2
+    file: concourse-git/hello-world.yaml
+  - set_pipeline: pipline-2
+    file: concourse-git/hello-world.yaml
+  

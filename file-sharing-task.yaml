@@ -1,0 +1,30 @@
+---
+jobs:
+- name: passing-files-between-tasks
+  public: true
+  plan:
+  - task: make-a-file
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source: { repository: nginx }
+      run:
+        path: sh
+        args:
+          - -exc
+          - ls -la; echo "Created a file on $(date)" > ./files/created_file
+      outputs:
+        - name: files #this will create a "files" directory in the container
+  - task: consume-the-file
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source: { repository: busybox }
+      inputs:
+        - name: files
+      run:
+        path: cat
+        args:
+          - ./files/created_file

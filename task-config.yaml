@@ -1,0 +1,30 @@
+#This allows you to reuse the task configuration in multiple places using the YAML anchor *task-config.
+task-config: &task-config
+  platform: linux
+  image_resource:
+    type: registry-image
+    source: { repository: nginx }
+  inputs:
+  - name: concourse-git
+
+
+resources:
+- name: concourse-git
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/niteesh6024/concourse.git
+
+
+jobs:
+- name: job
+  public: true
+  plan:
+    - get: concourse-git
+      trigger: true
+    - task: testing-taskconfig
+      config:
+        << : *task-config 
+        run:
+          path: ls
+          

@@ -1,0 +1,56 @@
+---
+demo: &demo
+  platform: linux
+  image_resource:
+    type: registry-image
+    source: { repository: nginx}
+
+resources:
+- name: every-30s
+  type: time
+  icon: clock-outline
+  source:
+    interval: 30s
+
+jobs:
+- name: triggered-first
+  public: true
+  plan:
+    - get: every-30s
+      trigger: true
+    - task: simple-task
+      config:
+        << : *demo
+        run:
+          path: echo
+          args: ["Hello, from 1st job"]
+
+#just linked the triggered-first to the non-trigger but not trigger the 2nd
+- name: not-triggered
+  public: true
+  plan:
+    - get: every-30s
+      passed: [triggered-first]
+    - task: simple-task
+      config:
+        << : *demo
+        run:
+          path: echo
+          args: ["Hello, from non-triggered job"]
+
+#linked and automatically trigger the triggered-first to the trigger-second 
+- name: triggered-second
+  public: true
+  plan:
+    - get: every-30s
+      passed: [triggered-first]
+      trigger: true
+    - task: simple-task
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source: { repository: nginx }
+        run:
+          path: echo
+          args: ["Hello, from triggered job"]

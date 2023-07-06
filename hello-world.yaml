@@ -1,31 +1,14 @@
 ---
-
-resources:
-- name: concourse-git
-  type: git
-  icon: github
-  source:
-    uri: https://github.com/niteesh6024/concourse.git
-
 jobs:
 - name: job
+  public: true
   plan:
-  - get: concourse-git
-    trigger: true
-  - task: basic-commands
+  - task: simple-task
     config:
-      inputs:
-        - name: concourse-git
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source: { repository: nginx }
       run:
-        path: sh
-        args: 
-          - -c #tells to read multiple inputs
-          - |
-            echo hi niteesh
-            ls
-            
-        
+        path: echo
+        args: ["Hello world!"]
