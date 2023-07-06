@@ -23,8 +23,8 @@ jobs:
     passed: [set-self]
   - set_pipeline: pipline-1
     file: concourse-git/hello-world.yaml
-  - set_pipeline: pipline-1
+  - set_pipeline: pipline-2
     file: concourse-git/hello-world.yaml
-  - set_pipeline: pipline-1
+  - set_pipeline: pipline-3
     file: concourse-git/hello-world.yaml
   
