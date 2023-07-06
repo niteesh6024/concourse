@@ -26,5 +26,6 @@ jobs:
           - -c #tells to read multiple inputs
           - |
             echo hi niteesh
+            ls
             
         
