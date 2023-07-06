@@ -27,4 +27,6 @@ jobs:
     file: concourse-git/hello-world.yaml
   - set_pipeline: pipline-3
     file: concourse-git/hello-world.yaml
+  - set_pipeline: pipline-4
+    file: concourse-git/hello-world.yaml
   
