@@ -1,0 +1,58 @@
+#The purpose of a PUT step is to push to the given resource while an OUTPUT is the result of TASK step
+
+jobs:
+- name: put-to-second
+  plan:
+  - get: first-resource
+  - task: creating-the-file
+    config:
+      inputs: #taking the first-resource from job into the task
+        - name: first-resource
+      outputs: #push the first-resource into the job
+        - name: first-resource
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: { repository: nginx }
+      run:
+        path: sh
+        args: 
+          - -c #tells to read multiple inputs
+          - |
+            cat ./first-resource/version
+            echo hi niteesh > ./first-resource/niteesh.txt
+            ls ./first-resource/
+  - put: second-resource #target resource name
+    params:
+      file: first-resource/niteesh.txt  #fetch the file from the 1st-RS and push it to 2nd-RS
+
+
+
+- name: show-second
+  plan:
+  - get: second-resource
+    trigger: true
+    passed: [put-to-second]
+  - task: verifying-file
+    config:
+      inputs:
+        - name: second-resource
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: { repository: nginx }
+      run:
+        path: sh
+        args: 
+          - -c #tells to read multiple inputs
+          - |
+            ls ./second-resource/
+            cat ./second-resource/version
+
+            
+
+resources:
+- name: first-resource
+  type: mock
+- name: second-resource
+  type: mock

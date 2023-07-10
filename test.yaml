@@ -1,30 +1,92 @@
----
 resources:
-- name: concourse-git
-  type: git
-  icon: github
-  source:
-    uri: https://github.com/niteesh6024/concourse.git
-
+  - name: my-repo
+    type: git
+    source:
+      uri: https://github.com/niteesh6024/test.git
+      branch: master
+      #private_key: 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
 
 jobs:
-# update this pipeline before updating child pipelines
-- name: set-self
-  plan:
-  - get: concourse-git
-    trigger: true
-  - set_pipeline: self
-    file: concourse-git/set-pipeline.yaml
+  - name: push-changes
+    plan:
+      - get: my-repo
+      - task: update-repo
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source: { repository: alpine/git }
+          inputs:
+            - name: my-repo
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                # Perform changes in the repository
+                git config --global user.email "boddapuniteesh541@gmail.com"
+                git config --global user.name "niteesh"
+                cd my-repo
+                touch new-file.txt
+                git add .
+                git commit -m "Add new file"
+      - put: my-repo
+        params:
+          repository: my-repo
+          token: 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
 
-- name: set-example-pipelines
-  plan:
-  - get: concourse-git
-    trigger: true
-    passed: [set-self]
-  - set_pipeline: pipline-1
-    file: concourse-git/hello-world.yaml
-  - set_pipeline: pipline-2
-    file: concourse-git/hello-world.yaml
-  - set_pipeline: pipline-2
-    file: concourse-git/hello-world.yaml
-  
+
+---
+
+
+
+
+
+
+
+# resources:
+# - name: code
+#   type: git
+#   source:
+#     username: niteesh6024
+#     password: Niteesh@6024
+#     uri: https://github.com/niteesh6024/test.git
+#     branch: master
+
+
+# jobs:
+# - name: make-a-change
+#   plan:
+#   - get: code
+#   - task: create-new-uuid
+#     config:
+#       platform: linux
+#       image_resource:
+#         type: docker-image
+#         source: {repository: czero/cflinuxfs2}
+#       inputs:
+#       - name: code
+#       outputs:
+#       - name: my-other-output
+#       run:
+#         path: bash
+#         args:
+#         - -c
+#         - |
+#           #!/bin/bash -x
+#           git clone code my-other-output
+#           cd my-other-output/
+#           git config --global user.email "boddapuniteesh541@gamil.com"
+#           git config --global user.name "niteesh6024"
+#           git checkout -b whatever
+#           thedate=$(date +'%s')
+#           touch garbage
+#           cd garbage
+#           touch $thedate
+#           git add -A
+#           git commit -m "$thedate"
+#           git remote set-url origin https://niteesh6024:Niteesh@6024@github.com/niteesh6024/test.git
+
+#   - put: code
+#     params:
+#       repository: my-other-output

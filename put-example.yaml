@@ -1,0 +1,61 @@
+#The purpose of a PUT step is to push to the given resource while an OUTPUT is the result of TASK step
+---
+resources:
+  - name: resource-gist
+    type: git
+    source:
+      branch: master
+      uri: https://github.com/niteesh6024/test.git
+      #private_key: ((publishing-outputs-private-key))
+      username: niteesh6024
+      password: Niteesh@6024
+
+jobs:
+  - name: job-bump-date
+    serial: true
+    plan:
+      - get: resource-gist
+      - task: bump-timestamp-file
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source: {repository:  alpine/git}
+          inputs:
+            - name: resource-gist
+          outputs:
+            - name: updated-gist
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                git clone resource-gist updated-gist
+                cd updated-gist
+                date > bumpme
+                git config --global user.email "boddapuniteesh541@gmail.com"
+                git config --global user.name "niteesh"
+                git add .
+                git commit -m "Bumped date"
+                
+      - put: resource-gist
+        params: {repository: updated-gist} #directory where you cloned the repo
+
+  - name: job-show-date
+    plan:
+      - get: resource-gist
+        passed: [job-bump-date]
+        trigger: true
+      - task: show-date
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source: {repository: busybox}
+          inputs:
+            - name: resource-gist
+          run:
+            path: cat
+            args: [resource-gist/bumpme]
+
+

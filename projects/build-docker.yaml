@@ -1,0 +1,44 @@
+---
+resources:
+  - name: docker-git
+    type: git
+    source:
+      uri: https://github.com/niteesh6024/docker.git
+
+
+  - name: hello-world-docker-image
+    type: docker-image
+    source:
+      email: "boddapuniteesh541@gmail.com"
+      username: niteesh6024
+      password: "Niteesh@6024"
+      repository: niteesh6024/hello-world #image name
+
+
+jobs:
+  - name: publish-docker-hub
+    public: true
+    plan:
+      - get: docker-git
+      - put: hello-world-docker-image
+        params:
+          build: docker-git/hello-world-DF
+      - task: run
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: niteesh6024/hello-world
+          run:
+            path: sh
+            args: 
+              - -c #tells to read multiple inputs
+              - |
+               /bin/hello-world
+               cd /
+               ls
+               pwd
+                
+          params:
+           NAME: Niteesh Satya Sai #passing the name to the env variable of the hello-world
