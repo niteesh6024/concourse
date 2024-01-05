@@ -26,5 +26,8 @@ jobs:
       config:
         << : *task-config 
         run:
-          path: ls
+          path: sh
+          args: ["-lc", "exit 1"]
+    - task: simple-task-2
+      file: concourse-git/extra/hello-world.yaml
           

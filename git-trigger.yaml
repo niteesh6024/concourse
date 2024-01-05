@@ -10,10 +10,12 @@ jobs:
   plan:
   - get: concourse-git
     trigger: true
-  - task: basic-commands
+  - task: task-1
     config:
       inputs:
         - name: concourse-git
+      outputs:
+        - name: output-concourse-git
       platform: linux
       image_resource:
         type: docker-image
@@ -25,6 +27,22 @@ jobs:
           - |
             ls
             pwd
-            echo hi niteesh
+            echo  > ./../output-concourse-git/app.txt
+        dir: concourse-git
+  - task: task-2
+    config:
+      inputs:
+        - name: output-concourse-git
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: { repository: nginx }
+      run:
+        path: sh
+        args: 
+          - -c #tells to read multiple inputs
+          - |
+            ls
+            pwd
             
-        
+        dir: output-concourse-git

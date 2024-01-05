@@ -1,0 +1,186 @@
+# Pipeline to apply the platform changes on merge to main
+---
+on_abort_notification: &on_abort_notification
+  do:
+    - put: metadata
+    - task: notify-slack-abort
+      file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/slack-message-sender.yml
+      params:
+        job_status: "aborted"
+        slack_webhook_secret: ((slack_webhook_secret))
+        channel_id: ${tfparams.slack_channel}
+      vars:
+        git_repo: ${tfparams.git_repo_name}-deploy
+        build_metadata: metadata
+        shared_repo: adtech-shared-modules
+on_failure_notification: &on_failure_notification
+  do:
+    - put: metadata
+    - task: notify-slack-failure
+      file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/slack-message-sender.yml
+      params:
+        job_status: "failed"
+        slack_webhook_secret: ((slack_webhook_secret))
+        channel_id: ${tfparams.slack_channel}
+      vars:
+        git_repo: ${tfparams.git_repo_name}-deploy
+        build_metadata: metadata
+        shared_repo: adtech-shared-modules
+on_success_notification: &on_success_notification
+  do:
+    - put: metadata
+    - task: notify-slack-success
+      file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/slack-message-sender.yml
+      params:
+        job_status: "succeeded"
+        slack_webhook_secret: ((slack_webhook_secret))
+        channel_id: ${tfparams.slack_channel}
+      vars:
+        git_repo: ${tfparams.git_repo_name}-deploy
+        build_metadata: metadata
+        shared_repo: adtech-shared-modules
+
+resource_types:
+  - name: metadata
+    type: docker-image
+    source:
+      repository: olhtbr/metadata-resource
+      tag: 2.0.1
+
+resources:
+  - name: "${tfparams.git_repo_name}-deploy"
+    type: git
+    icon: github
+    webhook_token: ((${tfparams.git_repo_name}-webhook-token))
+    source:
+      paths:
+%{ for path in "${tfparams.git_resource_source_paths}" ~}
+        - "${path}"
+%{ endfor ~}
+      clean_tags: true
+      branch: main
+      uri: https://github.com/sky-uk/${tfparams.git_repo_name}
+      username: ${tfparams.bot_user}
+      password: ((infra_github_pat))
+  - name: adtech-shared-modules
+    type: git
+    icon: github
+    webhook_token: ((${tfparams.git_repo_name}-webhook-token))
+    source:
+      uri: https://github.com/sky-uk/adtech-shared-modules
+      branch: main
+      username: ${tfparams.bot_user}
+      password: ((infra_github_pat))
+  - name: metadata
+    type: metadata
+    icon: card-bulleted-outline
+jobs:
+  - name: build
+    serial: true
+    plan:
+      - get: ${tfparams.git_repo_name}-deploy
+        trigger: true
+      - get: adtech-shared-modules
+      - in_parallel:
+          - task: set-up-gcloud-sa-keys
+            file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/set-up-gcloud-sa-keys.yml
+            vars:
+              output_dir: gcloud-sa-key
+              gcp_service_account_key: ((${tfparams.project}-sa-key.keyfile))
+      - task: create-tag
+        file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/create-tag.yml
+        vars:
+          git_repo_url: ${tfparams.git_repo_url}
+          git_repo: ${tfparams.git_repo_name}-deploy
+          output_dir: version_dir
+          tag_prefix: ${tfparams.tag_prefix}
+          branch: main
+          shared_repo: adtech-shared-modules
+          github_token: ((infra_github_pat))
+      - task: static-code-checks
+        privileged: true
+        file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/run-static-code-checks.yml
+        vars:
+          git_repo: ${tfparams.git_repo_name}-deploy
+          gcloud_sa_key_dir: gcloud-sa-key
+          region: ${tfparams.region}
+          environment: ${tfparams.project}
+          shared_repo: adtech-shared-modules
+      - task: build-and-push-image
+        privileged: true
+        file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/build-and-push-image.yml
+        vars:
+          git_repo: ${tfparams.git_repo_name}-deploy
+          gcloud_sa_key_dir: gcloud-sa-key
+          version_dir: version_dir
+          region: ${tfparams.region}
+          environment: ${tfparams.project}
+          shared_repo: adtech-shared-modules
+      - task: tf-init-plan
+        privileged: true
+        file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/tf-init-plan.yml
+        vars:
+          git_repo: ${tfparams.git_repo_name}-deploy
+          gcloud_sa_key_dir: gcloud-sa-key
+          version_dir: version_dir
+          region: ${tfparams.region}
+          environment: ${tfparams.project}
+          github_token: ((infra_github_pat))
+          shared_repo: adtech-shared-modules
+
+    on_abort: *on_abort_notification
+    on_error: *on_failure_notification
+    on_failure: *on_failure_notification
+    on_success: *on_success_notification
+
+
+  - name: deploy-to-test
+    serial: true
+    serial_groups: [project-dev]
+    plan:
+      - get: ${tfparams.git_repo_name}-deploy
+        passed: [ build ]
+        trigger: true
+      - get: adtech-shared-modules
+      - task: set-up-gcloud-sa-keys
+        file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/set-up-gcloud-sa-keys.yml
+        vars:
+          output_dir: gcloud-sa-key
+          gcp_service_account_key: ((${tfparams.project}-sa-key.keyfile))
+      - task: get-latest-image-revision
+        file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/gcp-get-latest-tag.yml
+        vars:
+          region: ${tfparams.region}
+          environment: ${tfparams.project}
+          docker_repo: ${tfparams.docker_repo}
+          image: ${tfparams.docker_image}
+          gcloud_sa_key_dir: gcloud-sa-key
+          version_dir: version_dir
+          git_repo: ${tfparams.git_repo_name}-deploy
+          shared_repo: adtech-shared-modules
+          output_dir: version_dir
+      - task: tf-init-apply
+        privileged: true
+        file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/tf-init-apply.yml
+        vars:
+          git_repo: ${tfparams.git_repo_name}-deploy
+          gcloud_sa_key_dir: gcloud-sa-key
+          region: ${tfparams.region}
+          environment: ${tfparams.project}
+          version_dir: version_dir
+          github_token: ((infra_github_pat))
+          shared_repo: adtech-shared-modules
+      - task: run-infra-tests
+        privileged: true
+        file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/run-infra-tests.yml
+        vars:
+          git_repo: ${tfparams.git_repo_name}-deploy
+          gcloud_sa_key_dir: gcloud-sa-key
+          region: ${tfparams.region}
+          environment: ${tfparams.project}
+          version_dir: version_dir
+          shared_repo: adtech-shared-modules
+    on_abort: *on_abort_notification
+    on_error: *on_failure_notification
+    on_failure: *on_failure_notification
+    on_success: *on_success_notification

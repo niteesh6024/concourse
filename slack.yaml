@@ -1,0 +1,46 @@
+---
+task-config: &task-config
+  platform: linux
+  image_resource:
+    type: registry-image
+    source: { repository: nginx }
+  inputs:
+  - name: concourse-git
+
+resources:
+- name: concourse-git
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/niteesh6024/concourse.git
+- name: notify
+  type: slack-notification
+  source:
+    url: https://hooks.slack.com/services/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
+
+resource_types:
+- name: slack-notification
+  type: docker-image
+  source:
+    repository: cfcommunity/slack-notification-resource
+
+jobs:
+- name: slack-notification-job
+  plan:
+    - get: concourse-git
+      trigger: true
+
+    - task: failing-task
+      config:
+        << : *task-config
+        run:
+          path: sh
+          args: ["ls","-lc", "exit 1"]
+
+  on_failure:
+    put: notify
+    params:
+      text: |
+        "${BUILD_PIPELINE_NAME} » ${BUILD_JOB_NAME} » ${BUILD_NAME} - ${BUILD_PIPELINE_INSTANCE_VARS} Still Failing after ${BUILD_DURATION} (Open)"
+        "Build of FluidCloud/mon-back-end/incident-detail-api/DAT has failed due to an error. Further details available here: ${BUILD_URL}"
+      silent: true 

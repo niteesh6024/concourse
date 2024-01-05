@@ -12,3 +12,5 @@ jobs:
   - get: concourse-git
   - task: simple-task
     file: concourse-git/extra/hello-world.yaml
+  - task: simple-task-2
+    file: concourse-git/extra/hello-world.yaml

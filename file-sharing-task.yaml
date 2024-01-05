@@ -15,7 +15,7 @@ jobs:
         path: sh
         args:
           - -exc
-          - ls -la; echo "Created a file on $(date)" > ./files/created_file
+          - ls -la; echo "Created a file on $(date)" > ./files/created_file; pwd
       outputs:
         - name: files #this will create a "files" directory in the container
   - task: consume-the-file

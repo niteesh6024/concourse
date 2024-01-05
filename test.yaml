@@ -1,92 +1,59 @@
 resources:
-  - name: my-repo
-    type: git
-    source:
-      uri: https://github.com/niteesh6024/test.git
-      branch: master
-      #private_key: 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
+- name: concourse-git
+  type: git
+  icon: github
+  source:
+    uri: https://github.com/niteesh6024/concourse.git
 
 jobs:
-  - name: push-changes
-    plan:
-      - get: my-repo
-      - task: update-repo
-        config:
-          platform: linux
-          image_resource:
-            type: docker-image
-            source: { repository: alpine/git }
-          inputs:
-            - name: my-repo
-          run:
-            path: sh
-            args:
-              - -exc
-              - |
-                # Perform changes in the repository
-                git config --global user.email "boddapuniteesh541@gmail.com"
-                git config --global user.name "niteesh"
-                cd my-repo
-                touch new-file.txt
-                git add .
-                git commit -m "Add new file"
-      - put: my-repo
-        params:
-          repository: my-repo
-          token: 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
+- name: job-gcp-test
+  plan:
+  - get: concourse-git
+    trigger: true
+  - task: task-1
+    config:
+      inputs:
+        - name: concourse-git
+      outputs:
+        - name: concourse-git
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: google/cloud-sdk
+          tag: alpine
+      run:
+        path: /bin/bash
+        args:
+          - -ceux #tells to read multiple inputs
+          - |
+            echo $SA_KEY_JSON > ./sa-key.json
+            gcloud auth activate-service-account --key-file=./sa-key.json
+            gcloud container images list-tags europe-west2-docker.pkg.dev/uk-sa-observability-preprod/artifact/hpe-oneview --format="get(tags)"  > ./EXISTING_VERSION1.txt
+            gcloud container images list-tags europe-west2-docker.pkg.dev/uk-sa-observability-prod/artifact/hpe-oneview --format="get(tags)" > ./EXISTING_VERSION2.txt  
+            cat EXISTING_VERSION1.txt
+            cat EXISTING_VERSION2.txt
+        dir: concourse-git
+      params:
+        SA_KEY_JSON: ((uk-sa-observability-prod-sa-key))
+        
 
-
----
-
-
-
-
-
-
-
-# resources:
-# - name: code
-#   type: git
-#   source:
-#     username: niteesh6024
-#     password: Niteesh@6024
-#     uri: https://github.com/niteesh6024/test.git
-#     branch: master
-
-
-# jobs:
-# - name: make-a-change
-#   plan:
-#   - get: code
-#   - task: create-new-uuid
-#     config:
-#       platform: linux
-#       image_resource:
-#         type: docker-image
-#         source: {repository: czero/cflinuxfs2}
-#       inputs:
-#       - name: code
-#       outputs:
-#       - name: my-other-output
-#       run:
-#         path: bash
-#         args:
-#         - -c
-#         - |
-#           #!/bin/bash -x
-#           git clone code my-other-output
-#           cd my-other-output/
-#           git config --global user.email "boddapuniteesh541@gamil.com"
-#           git config --global user.name "niteesh6024"
-#           git checkout -b whatever
-#           thedate=$(date +'%s')
-#           touch garbage
-#           cd garbage
-#           touch $thedate
-#           git add -A
-#           git commit -m "$thedate"
-#           git remote set-url origin https://niteesh6024:Niteesh@6024@github.com/niteesh6024/test.git
-
-#   - put: code
-#     params:
-#       repository: my-other-output
+  - task: task-2
+    config:
+      inputs:
+        - name: concourse-git
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: google/cloud-sdk
+          tag: alpine
+      run:
+        path: /bin/bash
+        args:
+          - -ceux #tells to read multiple inputs
+          - |
+            
+            cat EXISTING_VERSION1.txt
+            cat EXISTING_VERSION2.txt
+        dir: concourse-git

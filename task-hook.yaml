@@ -45,6 +45,13 @@ jobs:
         run:
           path: sh
           args: ["-lc", "exit 1"]
+      on_success:
+        task: task-success
+        config:
+          << : *task-config
+          run:
+            path: echo
+            args: ["This task succeeded!"]
       on_failure:
         task: task-failure
         config:

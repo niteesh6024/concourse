@@ -1,0 +1,57 @@
+# Pipeline to apply the platform changes on merge to main
+---
+task-config: &task-config
+  platform: linux
+  image_resource:
+    type: registry-image
+    source: { repository: nginx }
+  inputs:
+  - name: concourse-git
+
+on_failure_notification: &on_failure_notification
+  do:
+    - put: metadata
+    - task: notify-slack-failure
+      file: adtech-shared-modules/infra/modules/concourse/pipelines/tasks/slack-message-sender.yml
+      params:
+        job_status: "failed"
+        slack_webhook_secret: ((slack_webhook_secret))
+        channel_id: ${tfparams.slack_channel}
+      vars:
+        git_repo: concourse
+        build_metadata: metadata
+        shared_repo: concourse
+
+resource_types:
+  - name: metadata
+    type: docker-image
+    source:
+      repository: olhtbr/metadata-resource
+      tag: 2.0.1
+
+resources:
+  - name: concourse-git
+    type: git
+    icon: github
+    source:
+      uri: https://github.com/niteesh6024/concourse.git
+
+  - name: metadata
+    type: metadata
+    icon: card-bulleted-outline
+
+jobs:
+- name: slack-notification-job
+  plan:
+    - get: concourse-git
+      trigger: true
+    - task: failing-task
+      config:
+        << : *task-config
+        run:
+          path: sh
+          args: ["-lc", "exit 1"]
+
+  on_error: *on_failure_notification
+  on_failure: *on_failure_notification
+
