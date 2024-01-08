@@ -2,8 +2,8 @@
 task-config: &task-config
   platform: linux
   image_resource:
-    type: registry-image
-    source: { repository: nginx }
+    type: docker-image
+    source: { repository: alpine/git }
   inputs:
   - name: concourse-git
 
@@ -16,7 +16,7 @@ resources:
 - name: notify
   type: slack-notification
   source:
-    url: https://hooks.slack.com/services/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
+    url: https://hooks.slack.com/services/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
 
 resource_types:
 - name: slack-notification
@@ -35,12 +35,16 @@ jobs:
         << : *task-config
         run:
           path: sh
-          args: ["ls","-lc", "exit 1"]
+          args:
+            - -exc
+            - exit 1; cd concourse-git/.git; ls -la; cat committer_name; cat commit_message;
+          
 
   on_failure:
     put: notify
     params:
       text: |
-        "${BUILD_PIPELINE_NAME} » ${BUILD_JOB_NAME} » ${BUILD_NAME} - ${BUILD_PIPELINE_INSTANCE_VARS} Still Failing after ${BUILD_DURATION} (Open)"
-        "Build of FluidCloud/mon-back-end/incident-detail-api/DAT has failed due to an error. Further details available here: ${BUILD_URL}"
+        "${BUILD_PIPELINE_NAME} » ${BUILD_JOB_NAME} » ${BUILD_NAME} - ${BUILD_PIPELINE_INSTANCE_VARS} triggered by "
+        ((instance_var))
+        "$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
       silent: true 

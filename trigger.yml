@@ -1,0 +1,24 @@
+---
+resources:
+- name: concourse-git
+  type: git
+  icon: github
+  check_every: 1m
+  source:
+    uri: https://github.com/niteesh6024/concourse.git
+
+
+jobs:
+# update this pipeline before updating child pipelines
+
+- name: set-example-pipelines
+  public: true
+  plan:
+  - get: concourse-git
+    trigger: true
+  - set_pipeline: slack-notification
+    file: concourse-git/slack.yaml
+    instance_vars:
+      CLUSTER_NAME: uk-onprem
+
+
